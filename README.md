@@ -1,6 +1,6 @@
 # The Open Agentic Web
 
-Create, own and connect agents on today's web. [The Open Agentic Web](http://worldwideagenticweb.org).
+Create, own and connect agents on today's web. [The Open Agentic Web](https://worldwideagenticweb.org).
 
 
 ## Why
@@ -216,4 +216,4 @@ Discuss ideas for agentic web applications in the [Agentic Web Ideas](https://gi
 
 ## FAQ
 
-See the Frequently Asked Questions in [The Open Agentic Web](http://worldwideagenticweb.org).
+See the Frequently Asked Questions in [The Open Agentic Web](https://worldwideagenticweb.org).
