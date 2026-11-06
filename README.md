@@ -206,10 +206,15 @@ Try the [hosted version](https://neuro-san.evolution.ml/) with your own LLM keys
 
 ## Hackathon
 
-See [hackathon.md](hackathon.md) for ongoing hackathons to build the first open agentic websites.
+Check the official [hackathon](cognizant-agenticweb.devpost.com) page for details about the Agentic Web Hackathon.
+
 
 ## Ideas
 
 Discuss ideas for agentic web applications in the [Agentic Web Ideas](https://github.com/cognizant-ai-labs/agentic-web/discussions/categories/ideas) discussion category.
 
+
 ## FAQ
+
+> [!NOTE]
+> TODO: point to the agentic web FAQ page, once it exists
