@@ -53,11 +53,42 @@ The LLM provider, model and key used to answer these questions is chosen by the 
 
 ## Quickstart
 
-### With Neuro SAN and a major LLM provider API key
+### Generate a website with Neuro SAN and a major LLM provider API key
 
 Quickly prototype an agent network using the
 [Neuro SAN BYOK](https://neuro-san.evolution.ml/multiAgentAccelerator?) service.
 
+1. In the settings (top right corner), select your LLM provider and enter your API key.
+Test and Save.  
+![Neuro SAN Settings API keys](docs/images/neuro_san_settings_api_keys.png)
+2. Back to the main page, click the blue "+" button to create a new agent network.  
+![Neuro SAN Create Agent Network](docs/images/neuro_san_create_agent_network.png)
+3. In the bottom right corner, type in your prompt and click the blue "Send" arrow button. For instance:  
+```prompt
+Create an assistant for a pizza restaurant website, with sub agents for menu, order and delivery
+```  
+![Neuro SAN ANDE prompt](docs/images/neuro_san_ande_prompt.png)  
+The agent network designer will create an agent network and come back with
+a proposed design and a few sample queries.
+4. Click on the generated agent network that appears in the left panel menu as
+a "Temporary" agent network to interact with it.
+It will be available for 3 days before it is automatically deleted.  
+![Neuro SAN Temporary Agent Network](docs/images/neuro_san_temporary_agent_network.png)
+6. The agents are not grounded yet, but you can test the agent network by typing in queries and clicking the blue "Send" arrow button.  
+![Neuro SAN Chat](docs/images/neuro_san_chat.png)
+7. Update the design as needed: click the `Edit this network` `🖊️` icon next to the
+agent network name under "Temporary" in the left panel menu.
+Then use the "NETWORK EDITOR" prompt at the bottom of the screen,
+below the agent network graph to tell the agent network designer what to change.
+Once satisfied, click the "Download network
+definition" icon `⤓` next to the agent network, 
+This will download the `.hocon` file describing the agent network.
+See [examples/pizza_restaurant_website_assistant.hocon](examples/pizza_restaurant_website_assistant.hocon) for an example.
+
+
+### Next steps
+
+Ground the agent network, generate a website bundle and deploy it to a public hosting service. TODO
 
 ## Building
 
@@ -116,5 +147,9 @@ Try the [hosted version](https://neuro-san.evolution.ml/) with your own LLM keys
 ## Hackathon
 
 See [hackathon.md](hackathon.md) for ongoing hackathons to build the first open agentic websites.
+
+## Ideas
+
+Discuss ideas for agentic web applications in the [Agentic Web Ideas](https://github.com/cognizant-ai-labs/agentic-web/discussions/categories/ideas) discussion category.
 
 ## FAQ
