@@ -1,6 +1,6 @@
 # The Open Agentic Web
 
-Create, own and connect agents on today's web.
+Create, own and connect agents on today's web. [The Open Agentic Web](http://worldwideagenticweb.org).
 
 
 ## Why
@@ -206,7 +206,7 @@ Try the [hosted version](https://neuro-san.evolution.ml/) with your own LLM keys
 
 ## Hackathon
 
-Check the official [hackathon](cognizant-agenticweb.devpost.com) page for details about the Agentic Web Hackathon.
+Check the official [hackathon](https://cognizant-agenticweb.devpost.com/) page for details about the Agentic Web Hackathon.
 
 
 ## Ideas
@@ -216,5 +216,4 @@ Discuss ideas for agentic web applications in the [Agentic Web Ideas](https://gi
 
 ## FAQ
 
-> [!NOTE]
-> TODO: point to the agentic web FAQ page, once it exists
+See the Frequently Asked Questions in [The Open Agentic Web](http://worldwideagenticweb.org).
