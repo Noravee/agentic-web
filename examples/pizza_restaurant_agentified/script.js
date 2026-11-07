@@ -177,6 +177,7 @@ export function submitOrder({ customerName, fulfillment: method, address: destin
   renderCart();
   form.reset();
   updateFulfillment();
+  document.querySelector("#checkout-error").textContent = "";
   const confirmation = document.querySelector("#confirmation");
   confirmation.hidden = false;
   confirmation.focus();

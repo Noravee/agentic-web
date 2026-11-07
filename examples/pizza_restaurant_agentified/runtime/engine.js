@@ -362,6 +362,7 @@ export class Engine {
       resolveMcp: (ref, parentSpan) => self.resolveMcp(ref, parentSpan, slyData, manifest),
       resolveLink: (ref, parentSpan) => self.resolveLink(ref, network, base, parentSpan),
       requestConsent: (info) => self.requestConsent(info),
+      confirmWebsiteActions: (items) => self.onActionConfirm(items),
       // LangChain.js AgentRunner intrinsic (neuro-san-web owns the loop)
       // The bundled LangChain runner expects an HTTP OpenAI-compatible endpoint.
       // Static bundles use the dependency-free manual loop for browser://mock.

@@ -33,17 +33,19 @@ The assistant requires a configured provider; the manual website does not.
 3. Adjust a quantity with the manual buttons, then ask the assistant about your
    cart. Its next invocation includes the updated state.
 4. Ask to check out for pickup or delivery. Supply a name, an address for delivery,
-   and optionally a time today. Confirm the separate `checkout_demo_order`
-   proposal after reviewing its cart and total. The cart clears and the site
+   and optionally a time today. The agent calls `website_checkout_demo_order`.
+   Confirm its browser review dialog after checking the cart and total. The cart clears and the site
    displays the same confirmation it uses for manual orders.
 5. Ask about your latest order's status. It reports the local simulated order as
    `received`; it cannot look up orders from other sessions.
 
 Cart tool calls execute immediately and return local receipts to the model, so
-it can confirm the actual updated quantities and total. Checkout uses a separate
-reviewed proposal. Declining checkout review does not place an order.
+it can confirm the actual updated quantities and total. The checkout tool opens
+an explicit browser confirmation dialog before running the shared `submitOrder`
+function. Success clears the cart, resets the checkout form and displays the same
+order confirmation as clicking **Place demo order**. Declining checkout review does not place an order.
 Checkout includes `expectedCartVersion`; changes to the cart invalidate an old
-checkout proposal, so the customer must review the updated cart before retrying.
+checkout request, so the customer must review the updated cart before retrying.
 
 ## Components
 
@@ -55,14 +57,15 @@ Copied unchanged from the generated bundle:
 Adapted from that bundle:
 
 - `runtime/`: the complete browser dependency tree. `runner.js` adds a small
-  bridge from model tool calls to the site's action registry. Only operations
-  listed in `actions.agentTools` with a local `read` or `write` effect are exposed.
-  They use the same schema validation and receipt handling as reviewed actions.
-  Cart calls execute sequentially. Irreversible checkout is never auto-exposed.
+  bridge from model tool calls to the site's action registry. Only local operations
+  listed in `actions.agentTools` are exposed. They use the registry's schema
+  validation and receipt handling. Calls execute sequentially. Irreversible
+  checkout requires the host confirmation callback, which `engine.js` passes
+  through from `onActionConfirm`. Without approval, no order is submitted.
   The other runtime files remain unchanged.
 - `agent-manifest.json`: restaurant branding, supported sample queries, local
   specialist links, the `actions.module` registration entry, and an explicit
-  `actions.agentTools` list for state reads and cart changes.
+  `actions.agentTools` list for state reads, cart changes and confirmed checkout.
 - `pizza_restaurant_website_assistant.network.json`: the coordinator and menu,
   ordering and delivery specialists, with grounded instructions replacing the
   generated instructions to fabricate results. The generated CRUSE presentation
@@ -70,7 +73,7 @@ Adapted from that bundle:
 - `site.js`: adapts the generated `boot()` pattern to mount the assistant inside
   the restaurant. It enriches each local agent specification with a fresh
   `getRestaurantState()` snapshot, including the menu, cart, version and latest
-  order.
+  order. It also adds the actual cart and formatted total to checkout review.
 
 Restaurant integration:
 
@@ -83,8 +86,8 @@ Restaurant integration:
 - `restaurant-actions.js`: registers four page-local capabilities with explicit
   schemas and effects. `add_to_cart` increments one item's quantity and preserves
   existing items; `set_cart` replaces the entire cart. These are callable model
-  tools, along with `get_restaurant_state`. Checkout uses the cart's current
-  version and still requires customer review.
+  tools, along with `get_restaurant_state` and `checkout_demo_order`. Checkout
+  uses the cart's current version and requires customer review before executing.
 
 ## Verification
 
@@ -98,6 +101,8 @@ These exercise the real action registry, argument schemas, confirmation boundary
 shared cart, checkout receipts, validation, stale proposals and network structure.
 A regression check runs the actual agent loop with a scripted model tool response,
 verifying that the cart DOM updates and the next model call receives its receipt.
+Another runs checkout through the actual engine and compares its resulting page
+state to manual checkout, including declined confirmation and stale-cart checks.
 They do not call a paid LLM. Use the steps above to check a live provider and the UI.
 
 ## Limits

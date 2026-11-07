@@ -5,6 +5,7 @@ import { ActionRegistry } from "../runtime/actions.js";
 import { AgentNetwork, validateNetwork } from "../runtime/kernel.js";
 import { buildToolTable, dispatchToolCall, runAgent } from "../runtime/runner.js";
 import { TraceBus } from "../runtime/trace.js";
+import { Engine } from "../runtime/engine.js";
 
 // Minimal DOM fixture for application integration checks, not a browser emulator.
 class Element {
@@ -189,12 +190,104 @@ test("model tool calls execute the cart code and return receipts before the answ
   const before = getRestaurantState();
   await assert.rejects(dispatchToolCall(ctx, add, { id: "unknown", quantity: 1 }, null, []));
   assert.deepEqual(getRestaurantState(), before);
-  // Even an accidental manifest opt-in cannot bypass checkout review.
-  manifest.actions.agentTools.push("checkout_demo_order");
+  // Checkout cannot be exposed or executed without a confirmation handler.
   const table = await buildToolTable(ctx, network.getAgentSpec("front_desk_coordinator"), [], null);
   assert(!table.toolByName.has("website_checkout_demo_order"));
   await assert.rejects(dispatchToolCall(ctx, {
     kind: "website", ref: catalog.find(action => action.name === "checkout_demo_order").ref,
   }, checkout(), null, []));
   assert.deepEqual(getRestaurantState(), before);
+});
+
+test("agent checkout uses the engine confirmation gate and matches manual checkout", async () => {
+  const config = JSON.parse(await readFile(new URL("../pizza_restaurant_website_assistant.network.json", import.meta.url)));
+  const manifest = JSON.parse(await readFile(new URL("../agent-manifest.json", import.meta.url)));
+  const items = [{ id: "garden", quantity: 2 }];
+  const details = { customerName: "Sam", fulfillment: "delivery", address: "42 Oak Road", orderTime: "18:30" };
+  const prepareCart = () => {
+    setCart(items);
+    form.elements.customerName.value = details.customerName;
+    form.elements.orderTime.value = details.orderTime;
+    nodes.fulfillment.value = details.fulfillment;
+    nodes.fulfillment.handlers.change();
+    nodes.address.value = details.address;
+    nodes["checkout-error"].textContent = "Old validation error";
+  };
+  const pageSnapshot = () => ({
+    cart: getRestaurantState().cart,
+    total: nodes["cart-total"].textContent,
+    empty: nodes["empty-cart"].hidden,
+    disabled: nodes["place-order"].disabled,
+    name: form.elements.customerName.value,
+    address: nodes.address.value,
+    method: nodes.fulfillment.value,
+    time: form.elements.orderTime.value,
+    deliveryFields: nodes["delivery-fields"].hidden,
+    error: nodes["checkout-error"].textContent,
+    confirmation: nodes.confirmation.hidden,
+    orderTotal: nodes["order-total"].textContent,
+    orderItems: nodes["order-items"].children.map(node => node.textContent),
+    focused: document.activeElement === nodes.confirmation,
+  });
+  prepareCart();
+  form.handlers.submit({ preventDefault() {} });
+  const manualOrder = getRestaurantState().lastOrder;
+  const manualPage = pageSnapshot();
+
+  const callCheckout = async (confirm, args = checkout(details)) => {
+    const engine = new Engine({ originUrl: scope.base });
+    engine.actions = registry;
+    if (confirm) engine.onActionConfirm = confirm;
+    let calls = 0;
+    let receipt;
+    engine.top = {
+      network: new AgentNetwork(config, scope.network), base: scope.base, manifest,
+      llm: { async chat({ tools, messages }) {
+        calls++;
+        assert(tools.some(tool => tool.function.name === "website_checkout_demo_order"));
+        if (calls === 1) return {
+          content: "", toolCalls: [{ id: "checkout", type: "function", function: {
+            name: "website_checkout_demo_order", arguments: JSON.stringify(args),
+          } }],
+        };
+        receipt = JSON.parse(messages.find(message => message.role === "tool").content);
+        return { content: `Checkout result: ${receipt.status}`, toolCalls: [] };
+      } },
+    };
+    await engine.runTurn("Place my demo delivery order");
+    assert.equal(calls, 2);
+    return receipt;
+  };
+  prepareCart();
+  const beforeReview = pageSnapshot();
+  const previousOrder = getRestaurantState().lastOrder;
+  assert.equal((await callCheckout()).status, "cancelled", "Default engine must fail closed");
+  assert.deepEqual(pageSnapshot(), beforeReview);
+  let reviews = 0;
+  const receipt = await callCheckout(async plan => {
+    reviews++;
+    assert.deepEqual(pageSnapshot(), beforeReview, "Do not place the order before confirmation");
+    assert.equal(plan[0].action, "checkout_demo_order");
+    assert.equal(plan[0].effect, "irreversible");
+    assert.equal(plan[0].arguments.customerName, "Sam");
+    return true;
+  });
+  assert.equal(reviews, 1);
+  assert.equal(receipt.status, "succeeded");
+  assert.notEqual(receipt.result.orderId, previousOrder.orderId);
+  assert.deepEqual({ ...receipt.result, orderId: manualOrder.orderId }, manualOrder);
+  assert.deepEqual(pageSnapshot(), manualPage, "Manual and agent checkout must leave identical page state");
+  assert(nodes["order-summary"].textContent.includes(receipt.result.orderId));
+
+  prepareCart();
+  const beforeDecline = getRestaurantState();
+  assert.equal((await callCheckout(async () => false)).status, "cancelled");
+  assert.deepEqual(getRestaurantState(), beforeDecline);
+  const stale = await callCheckout(async () => {
+    setCart([{ id: "vegan", quantity: 1 }]);
+    return true;
+  });
+  assert.notEqual(stale.status, "succeeded");
+  assert.match(stale.error, /cart changed/);
+  assert.deepEqual(getRestaurantState().lastOrder, beforeDecline.lastOrder);
 });

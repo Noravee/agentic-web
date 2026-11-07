@@ -218,11 +218,13 @@ To create this version:
    operations in `actions.agentTools`. The copied runtime's `runner.js` includes
    a bridge that exposes those operations as model-callable `website_*` tools.
    The agent calls `website_add_to_cart` to run the site's code immediately and
-   receives a receipt with the updated cart. Checkout remains a separate action
-   proposal requiring customer review. All arguments are schema-validated.
+   receives a receipt with the updated cart. `website_checkout_demo_order` is
+   also a callable tool, gated by the engine's confirmation callback. It opens
+   a review dialog containing the cart, total and fulfillment details before
+   calling the shared `submitOrder()` function. All arguments are schema-validated.
    Cart changes appear in the existing cart; checkout uses the same validation
    and confirmation as the manual form. A cart version check rejects checkout
-   if the cart has changed since the proposal was prepared.
+   if the cart has changed since checkout was prepared.
 6. Serve the copy over HTTP (ES modules and runtime configuration need a server):
    ```shell
    python -m http.server 8080 --directory ./examples/pizza_restaurant_agentified
@@ -236,7 +238,7 @@ To create this version:
 Try asking “What are the vegetarian options?” or “Add two Margherita pizzas to
 my cart.” The agent calls the cart tool and the visible cart updates. Then ask
 for pickup or delivery checkout. Provide a name and, for delivery, an address; review the cart
-and total before confirming the separate checkout action. Its receipt and the
+and total in the checkout tool's confirmation dialog. Its receipt and the
 restaurant confirmation show the resulting demo order.
 
 This version supports menu questions, shared-cart updates, demo checkout and

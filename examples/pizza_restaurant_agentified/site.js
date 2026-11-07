@@ -9,6 +9,25 @@ try {
     originUrl: siteBase,
     sandboxWorkerUrl: new URL("runtime/sandbox-worker.js", siteBase).href,
   });
+  const reviewActions = engine.onActionConfirm;
+  engine.onActionConfirm = items => reviewActions(items.map(item => {
+    if (item.action !== "checkout_demo_order") return item;
+    const state = getRestaurantState();
+    const money = cents => new Intl.NumberFormat("en-US", {
+      style: "currency", currency: state.currency,
+    }).format(cents / 100);
+    return {
+      ...item,
+      arguments: {
+        ...item.arguments,
+        cart: state.cart.map(({ id, quantity }) => {
+          const pizza = state.menu.find(pizza => pizza.id === id);
+          return { name: pizza.name, quantity, lineTotal: money(pizza.price * quantity) };
+        }),
+        total: money(state.total),
+      },
+    };
+  }));
   // Enrich each invocation with current page data, so manual cart changes and
   // confirmed action receipts are visible to every local specialist.
   const network = engine.top.network;

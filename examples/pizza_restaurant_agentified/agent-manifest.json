@@ -71,7 +71,8 @@
     "agentTools": [
       "get_restaurant_state",
       "add_to_cart",
-      "set_cart"
+      "set_cart",
+      "checkout_demo_order"
     ]
   }
 }

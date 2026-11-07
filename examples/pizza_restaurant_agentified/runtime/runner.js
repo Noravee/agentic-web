@@ -192,12 +192,12 @@ export async function buildToolTable(ctx, spec, chain, parentSpan) {
       toolSchemas.push(schemaFor(name, c.spec.function));
     }
   }
-  // Publisher opt-in: expose selected local, reversible website actions as real
-  // model tools. Checkout remains a reviewed CRUSE action, never an auto tool.
+  // Publisher opt-in: expose selected local website actions as model tools.
+  // Irreversible operations also require the host's confirmation callback.
   const callable = new Set(ctx.manifest?.actions?.agentTools || []);
   for (const action of ctx.actions?.catalog({ base: ctx.baseOrigin, network: network.name }) || []) {
     if (!callable.has(action.name) || action.availability !== "local-only"
-      || !["read", "write"].includes(action.effect)) continue;
+      || (action.effect === "irreversible" && typeof ctx.confirmWebsiteActions !== "function")) continue;
     const name = `website_${action.name}`;
     if (toolByName.has(name)) throw new Error(`Duplicate website tool: ${name}`);
     toolByName.set(name, { kind: "website", ref: action.ref, parallelSafe: false });
@@ -310,14 +310,15 @@ export async function dispatchToolCall(ctx, entry, args, parentSpan, chain) {
     const registered = ctx.actions.entries.get(entry.ref);
     if (!registered || !ctx.manifest?.actions?.agentTools?.includes(registered.name)
       || registered.base !== ctx.baseOrigin || registered.network !== ctx.network.name
-      || registered.availability !== "local-only" || !["read", "write"].includes(registered.effect)) {
+      || registered.availability !== "local-only"
+      || (registered.effect === "irreversible" && typeof ctx.confirmWebsiteActions !== "function")) {
       throw new Error("Website action is not callable by this agent.");
     }
     const plan = ctx.actions.prepare({ kind: "action", action: entry.ref, arguments: args });
-    // The publisher enables these reversible cart operations; order placement
-    // continues through the existing review dialog and submitActions path.
-    const receipts = await ctx.actions.execute(plan, async () => true, crypto.randomUUID());
-    return receipts[0];
+    const confirm = registered.effect === "irreversible"
+      ? ctx.confirmWebsiteActions : async () => true;
+    const receipts = await ctx.actions.execute(plan, confirm, crypto.randomUUID());
+    return receipts?.[0] || { action: entry.ref, status: "cancelled", message: "Customer declined; nothing was submitted." };
   }
 
   if (entry.kind === "agent") {
@@ -442,7 +443,8 @@ export async function runAgent(ctx, agentName, userText, parentSpan, chain) {
   const presentationContext = agentPresentationContext(ctx, agentName);
   const nativeTools = new Set(ctx.manifest?.actions?.agentTools || []);
   const proposalCatalog = catalog.filter(action => !nativeTools.has(action.name)
-    || action.availability !== "local-only" || !["read", "write"].includes(action.effect));
+    || action.availability !== "local-only"
+    || (action.effect === "irreversible" && typeof ctx.confirmWebsiteActions !== "function"));
   const context = presentationContext + (presentationContext && ctx.actions ? actionContext(proposalCatalog) : "");
   const network = Object.create(ctx.network);
   network.getAgentSpec = (name) => {
