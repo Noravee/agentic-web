@@ -33,7 +33,10 @@ The assistant requires a configured provider; the manual website does not.
 3. Adjust a quantity with the manual buttons, then ask the assistant about your
    cart. Its next invocation includes the updated state.
 4. Ask to check out for pickup or delivery. Supply a name, an address for delivery,
-   and optionally a time today. The agent calls `website_checkout_demo_order`.
+   and optionally a time today. When several details are missing, the assistant
+   collects them together in one CRUSE form, carrying forward answers already
+   given. Submitting this form supplies the details to the agent; it then calls
+   `website_checkout_demo_order`.
    Confirm its browser review dialog after checking the cart and total. The cart clears and the site
    displays the same confirmation it uses for manual orders.
 5. Ask about your latest order's status. It reports the local simulated order as
@@ -62,6 +65,11 @@ Adapted from that bundle:
   validation and receipt handling. Calls execute sequentially. Irreversible
   checkout requires the host confirmation callback, which `engine.js` passes
   through from `onActionConfirm`. Without approval, no order is submitted.
+  `runner.js` also exposes `render_cruse`, so the model can attach widgets
+  through a real tool call instead of relying on fenced JSON in its final text.
+  These widgets survive plain-text final answers and specialist handoffs.
+  `cruse.js` accepts unfenced structured responses and combines compatible
+  child intake forms when the coordinator does not provide its own composition.
   The other runtime files remain unchanged.
 - `agent-manifest.json`: restaurant branding, supported sample queries, local
   specialist links, the `actions.module` registration entry, and an explicit
@@ -103,6 +111,11 @@ A regression check runs the actual agent loop with a scripted model tool respons
 verifying that the cart DOM updates and the next model call receives its receipt.
 Another runs checkout through the actual engine and compares its resulting page
 state to manual checkout, including declined confirmation and stale-cart checks.
+A CRUSE regression check verifies that a combined intake form is preserved and
+its submitted values can feed the checkout tool on the next turn.
+Additional checks cover widget tool calls reaching the final UI stream event,
+structured responses without fences, and preservation of specialist widgets
+when the coordinator answers in plain text.
 They do not call a paid LLM. Use the steps above to check a live provider and the UI.
 
 ## Limits

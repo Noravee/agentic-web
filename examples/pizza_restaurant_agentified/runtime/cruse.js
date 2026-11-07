@@ -74,6 +74,34 @@ export function normalizePresentation(value, prefix = "component") {
   return { presentation: components.length ? { version: 1, components } : null, issues };
 }
 
+// Preserve child intake widgets when the coordinator finishes with prose.
+// Combine compatible answer-only forms; action forms keep their own bindings.
+export function consolidateIntakePresentations(presentations) {
+  const components = [];
+  let intake;
+  for (const presentation of presentations) {
+    for (const component of presentation.components || []) {
+      if (component.kind !== "form" || component.submit) {
+        components.push(component);
+        continue;
+      }
+      const properties = component.schema.properties;
+      const compatible = intake && Object.entries(properties).every(([key, schema]) =>
+        !Object.hasOwn(intake.schema.properties, key)
+        || JSON.stringify(canonical(intake.schema.properties[key])) === JSON.stringify(canonical(schema)));
+      if (!compatible || Object.keys({ ...intake?.schema.properties, ...properties }).length > 40) {
+        intake = { ...component, schema: { ...component.schema,
+          properties: { ...properties }, required: [...(component.schema.required || [])] } };
+        components.push(intake);
+      } else {
+        Object.assign(intake.schema.properties, properties);
+        intake.schema.required = [...new Set([...intake.schema.required, ...(component.schema.required || [])])];
+      }
+    }
+  }
+  return normalizePresentation({ version: 1, components }).presentation;
+}
+
 // Preserve AAOSA metadata for parent agents, while exposing its human answer to
 // the UI. Handle presentation fences inside Response as well as outside it.
 export function parseAgentResponse(raw, source = {}) {
@@ -93,8 +121,14 @@ export function parseAgentResponse(raw, source = {}) {
     const plain = input.replace(/<\/?tool_(?:response|call)>/gi, "").trim();
     const match = plain.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
     const doc = parseJson(match ? match[1] : plain);
+    // Some providers return the structured composition directly, without fences.
+    if (isPresentation(doc) || isPresentation(doc?.presentation)) {
+      proposals.push(isPresentation(doc?.presentation) ? doc.presentation : doc);
+      return typeof doc.text === "string" ? doc.text : "";
+    }
     if (object(doc) && doc.Mode !== undefined && (doc.Name !== undefined || doc.Inquiry !== undefined)) {
       protocol = doc;
+      if (object(doc.Response)) return unwrap(JSON.stringify(doc.Response));
       return typeof doc.Response === "string" ? doc.Response : Array.isArray(doc.Requirements)
         ? doc.Requirements.map((r) => typeof r === "string" ? r : r?.description || r?.title || "").filter(Boolean).join("\n") : "";
     }
@@ -122,6 +156,7 @@ export function agentPresentationContext(ctx, agentName) {
   if (!ctx.network.config?.cruse && !spec?.instructions?.includes("GENERATIVE UI (CRUSE)")) return "";
   return `CRUSE invocation context (takes precedence over earlier presentation preferences):
 Audience: ${ctx.isTop && agentName === ctx.frontMan ? "the user" : "your parent agent; your presentation is a proposal, not directly displayed"}.
+The render_cruse tool is available to create widgets directly. When collecting multiple missing details, call render_cruse with ONE consolidated form, then finish with a brief introduction. Widgets submitted through this tool are preserved even if your final answer is plain text. A final answer or tool receipt must not claim that collecting form details places an order. For information-only requests, choose a useful component when it helps; do not ask for checkout details prematurely.
 Tool results may contain {cruse:1,text,presentation,protocol,source}. Read all relevant child answers AND presentation components. During your normal final synthesis, consolidate them into your own presentation. Merge redundant questions by meaning, use facts already supplied, preserve distinct requirements and disagreements, and defer details needed only for later steps. Do not copy a stack of child forms. You may replace proposed forms with prose, a table, report or chart, or omit a presentation when chat suffices. Prefer one focused input step when input is needed, with complementary visual components when useful. Plain chat can answer or amend a form; never require form submission just to continue. If presentationIssues or unrenderedProposals are present, recover useful facts and requirements into your answer or a valid presentation. Return human-facing text and optionally one consolidated cruse-ui block; child protocol metadata is context, not another UI. Never invent data to fill a chart or report.`;
 }
 

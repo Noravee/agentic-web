@@ -215,13 +215,19 @@ To create this version:
    `checkout_demo_order` in
    [restaurant-actions.js](examples/pizza_restaurant_agentified/restaurant-actions.js).
    Declare this module in the manifest's `actions` field and list the read/cart
-   operations in `actions.agentTools`. The copied runtime's `runner.js` includes
+   and checkout operations in `actions.agentTools`. The copied runtime's `runner.js` includes
    a bridge that exposes those operations as model-callable `website_*` tools.
    The agent calls `website_add_to_cart` to run the site's code immediately and
    receives a receipt with the updated cart. `website_checkout_demo_order` is
    also a callable tool, gated by the engine's confirmation callback. It opens
    a review dialog containing the cart, total and fulfillment details before
    calling the shared `submitOrder()` function. All arguments are schema-validated.
+   CRUSE forms still collect missing details together: submitting an intake form
+   passes its values to the agent, which then calls the checkout tool. Collecting
+   answers and confirming order placement remain separate steps.
+   The `render_cruse` tool attaches widgets directly to the response, preserving
+   them through plain-text final answers and specialist handoffs. The response
+   parser also accepts structured CRUSE JSON without a code fence.
    Cart changes appear in the existing cart; checkout uses the same validation
    and confirmation as the manual form. A cart version check rejects checkout
    if the cart has changed since checkout was prepared.

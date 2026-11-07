@@ -10,7 +10,7 @@
 
 import { ChatMessageType, filterSlyData, allowedDownstreamSly, parseExternalAgent } from "./kernel.js";
 import { actionContext, proposalRefs } from "./actions.js";
-import { parseAgentResponse, agentPresentationContext } from "./cruse.js";
+import { parseAgentResponse, agentPresentationContext, normalizePresentation, consolidateIntakePresentations } from "./cruse.js";
 import { applyPendingSteering, runInterruptibleModelCall } from "./turn-control.js";
 
 let invocationSequence = 0;
@@ -203,6 +203,24 @@ export async function buildToolTable(ctx, spec, chain, parentSpan) {
     toolByName.set(name, { kind: "website", ref: action.ref, parallelSafe: false });
     toolSchemas.push(schemaFor(name, { description: action.description, parameters: action.inputSchema }));
   }
+  if (network.config?.cruse) {
+    toolByName.set("render_cruse", { kind: "presentation", parallelSafe: false });
+    toolSchemas.push(schemaFor("render_cruse", {
+      description: "Create the CRUSE widgets for this response. Use this to show a consolidated form when several answers are needed, or a table, choice, report or other supported component. Widgets are preserved even if your final answer is plain text. This collects input or presents information; it does not execute website operations.",
+      parameters: {
+        type: "object", required: ["presentation"], additionalProperties: false,
+        properties: {
+          presentation: {
+            type: "object", required: ["version", "components"], additionalProperties: false,
+            properties: {
+              version: { type: "integer", enum: [1] },
+              components: { type: "array", minItems: 1, items: { type: "object" } },
+            },
+          },
+        },
+      },
+    }));
+  }
   return { toolByName, toolSchemas };
 }
 
@@ -306,6 +324,22 @@ export async function executeToolCalls(ctx, calls, parentSpan, chain, { maxConcu
 export async function dispatchToolCall(ctx, entry, args, parentSpan, chain) {
   const { trace } = ctx;
 
+  if (entry.kind === "presentation") {
+    if (!ctx.presentationOutput) throw new Error("No presentation output is available for this invocation.");
+    const normalized = normalizePresentation(args.presentation, ctx.invocation);
+    if (!normalized.presentation || normalized.issues.length) {
+      throw new Error(normalized.issues.join(" ") || "Provide at least one valid CRUSE component.");
+    }
+    const result = { presentation: normalized.presentation };
+    ctx.actions?.validatePresentation(result, ctx.allowedActionRefs || new Set());
+    if (!result.presentation || result.presentationIssues?.length) {
+      throw new Error(result.presentationIssues?.join(" ") || "Invalid CRUSE action binding.");
+    }
+    ctx.presentationOutput.presentation = result.presentation;
+    return { status: "accepted", componentIds: result.presentation.components.map(c => c.id),
+      message: "Widgets are attached to your response. Finish with a brief introduction; do not repeat the form questions in prose. This has not placed an order." };
+  }
+
   if (entry.kind === "website") {
     const registered = ctx.actions.entries.get(entry.ref);
     if (!registered || !ctx.manifest?.actions?.agentTools?.includes(registered.name)
@@ -322,7 +356,9 @@ export async function dispatchToolCall(ctx, entry, args, parentSpan, chain) {
   }
 
   if (entry.kind === "agent") {
-    return runAgent(ctx, entry.ref, argsToText(args), parentSpan, chain);
+    const result = await runAgent(ctx, entry.ref, argsToText(args), parentSpan, chain);
+    if (result.presentation) ctx.presentationOutput?.children?.push(result.presentation);
+    return result;
   }
 
   if (entry.kind === "coded") {
@@ -445,13 +481,17 @@ export async function runAgent(ctx, agentName, userText, parentSpan, chain) {
   const proposalCatalog = catalog.filter(action => !nativeTools.has(action.name)
     || action.availability !== "local-only"
     || (action.effect === "irreversible" && typeof ctx.confirmWebsiteActions !== "function"));
-  const context = presentationContext + (presentationContext && ctx.actions ? actionContext(proposalCatalog) : "");
+  const websiteContext = proposalCatalog.length || !catalog.length
+    ? actionContext(proposalCatalog)
+    : "\nWebsite operations are connected as website_* tools. CRUSE forms remain available to collect missing details in one step. Return an ordinary form without submit.actions; its submitted values arrive as CRUSE interaction data on the next turn. Then call the appropriate website tool using those values. A form submission only supplies answers; checkout still requires the tool's browser confirmation. Do not report a missing integration.\n";
+  const context = presentationContext + (presentationContext && ctx.actions ? websiteContext : "");
   const network = Object.create(ctx.network);
   network.getAgentSpec = (name) => {
     const spec = ctx.network.getAgentSpec(name);
     return name === agentName && spec && context ? { ...spec, instructions: `${spec.instructions || ""}\n\n${context}` } : spec;
   };
-  const local = { ...ctx, network, invocation: source.invocation, allowedActionRefs: new Set(catalog.map(a => a.ref)) };
+  const local = { ...ctx, network, invocation: source.invocation,
+    presentationOutput: { presentation: null, children: [] }, allowedActionRefs: new Set(catalog.map(a => a.ref)) };
   const raw = ctx.externalRunner
     ? await ctx.externalRunner(local, agentName, userText, parentSpan, chain, {
       buildToolTable, dispatchToolCall, executeToolCalls, schemaFor, argsToText,
@@ -459,6 +499,10 @@ export async function runAgent(ctx, agentName, userText, parentSpan, chain) {
     })
     : await runAgentManual(local, agentName, userText, parentSpan, chain);
   const result = parseAgentResponse(raw, source);
+  if (!result.presentation) {
+    result.presentation = local.presentationOutput.presentation
+      || consolidateIntakePresentations(local.presentationOutput.children);
+  }
   ctx.actions?.validatePresentation(result, local.allowedActionRefs);
   for (const ref of proposalRefs(result)) ctx.allowedActionRefs?.add(ref);
   ctx.trace.note("presentation_proposal", { parent: parentSpan, ...source, presentation: result.presentation, issues: result.presentationIssues });

@@ -6,6 +6,7 @@ import { AgentNetwork, validateNetwork } from "../runtime/kernel.js";
 import { buildToolTable, dispatchToolCall, runAgent } from "../runtime/runner.js";
 import { TraceBus } from "../runtime/trace.js";
 import { Engine } from "../runtime/engine.js";
+import { parseAgentResponse, consolidateIntakePresentations } from "../runtime/cruse.js";
 
 // Minimal DOM fixture for application integration checks, not a browser emulator.
 class Element {
@@ -290,4 +291,159 @@ test("agent checkout uses the engine confirmation gate and matches manual checko
   assert.notEqual(stale.status, "succeeded");
   assert.match(stale.error, /cart changed/);
   assert.deepEqual(getRestaurantState().lastOrder, beforeDecline.lastOrder);
+});
+
+test("a consolidated CRUSE intake form survives tool exposure and feeds checkout", async () => {
+  setCart([{ id: "margherita", quantity: 2 }]);
+  const config = JSON.parse(await readFile(new URL("../pizza_restaurant_website_assistant.network.json", import.meta.url)));
+  const manifest = JSON.parse(await readFile(new URL("../agent-manifest.json", import.meta.url)));
+  const engine = new Engine({ originUrl: scope.base });
+  engine.actions = registry;
+  const values = { customerName: "Taylor", fulfillment: "delivery", address: "12 Elm Street", orderTime: "19:00" };
+  let calls = 0;
+  let reviews = 0;
+  engine.onActionConfirm = async () => { reviews++; return true; };
+  engine.top = {
+    network: new AgentNetwork(config, scope.network), base: scope.base, manifest,
+    llm: { async chat({ messages, tools }) {
+      const prompt = messages[0].content;
+      assert(prompt.includes("ONE consolidated"));
+      assert(prompt.includes("CRUSE forms remain available"));
+      assert(!prompt.includes("No browser actions are registered"));
+      assert(tools.some(tool => tool.function.name === "website_checkout_demo_order"));
+      calls++;
+      if (calls === 1) return {
+        content: 'Your total is $24.00. Please fill in the remaining details.\n```cruse-ui\n' + JSON.stringify({
+          version: 1, components: [{
+            kind: "form", id: "order-details", title: "Order details",
+            schema: {
+              type: "object", properties: {
+                customerName: { type: "string", title: "Your name" },
+                fulfillment: { type: "string", enum: ["pickup", "delivery"] },
+                address: { type: "string", title: "Delivery address (only for delivery)" },
+                orderTime: { type: "string", title: "Time today (HH:MM; blank for ASAP)" },
+              }, required: ["customerName", "fulfillment"],
+            }, submitLabel: "Review order",
+          }],
+        }) + '\n```', toolCalls: [],
+      };
+      if (calls === 2) {
+        const input = messages.filter(message => message.role === "user").at(-1).content;
+        const interaction = JSON.parse(input.split("CRUSE interaction: ")[1]);
+        assert.deepEqual(interaction.values, values);
+        return { content: "", toolCalls: [{
+          id: "submit-collected-order", type: "function", function: {
+            name: "website_checkout_demo_order",
+            arguments: JSON.stringify({ ...interaction.values, expectedCartVersion: getRestaurantState().cartVersion }),
+          },
+        }] };
+      }
+      const receipt = JSON.parse(messages.find(message => message.role === "tool").content);
+      assert.equal(receipt.status, "succeeded");
+      return { content: `Demo order ${receipt.result.orderId} received.`, toolCalls: [] };
+    } },
+  };
+  const first = await engine.runTurn("I would like to check out");
+  assert.equal(first.presentation.components.length, 1);
+  const intake = first.presentation.components[0];
+  assert.equal(intake.kind, "form");
+  assert.equal(Object.keys(intake.schema.properties).length, 4);
+  assert(!intake.submit, "Intake supplies answers without executing an action");
+  assert.equal(reviews, 0);
+  assert.equal(getRestaurantState().total, 2400);
+  const second = await engine.runTurn("Review order", { interaction: {
+    turnId: first.turnId, componentId: intake.id, kind: "form", values,
+  } });
+  assert.equal(reviews, 1);
+  assert.equal(calls, 3);
+  assert.equal(getRestaurantState().lastOrder.customerName, "Taylor");
+  assert.equal(getRestaurantState().lastOrder.address, "12 Elm Street");
+  assert.equal(getRestaurantState().total, 0);
+  assert(second.text.includes(getRestaurantState().lastOrder.orderId));
+});
+
+test("render_cruse tool widgets reach the UI event even when final text has no fence", async () => {
+  const config = JSON.parse(await readFile(new URL("../pizza_restaurant_website_assistant.network.json", import.meta.url)));
+  const manifest = JSON.parse(await readFile(new URL("../agent-manifest.json", import.meta.url)));
+  const presentation = { version: 1, components: [{
+    kind: "form", id: "intake", title: "Order details",
+    schema: { type: "object", properties: {
+      customerName: { type: "string", title: "Your name" },
+      fulfillment: { type: "string", enum: ["pickup", "delivery"] },
+    }, required: ["customerName", "fulfillment"] },
+  }] };
+  const engine = new Engine({ originUrl: scope.base });
+  engine.actions = registry;
+  let calls = 0;
+  engine.top = {
+    network: new AgentNetwork(config, scope.network), base: scope.base, manifest,
+    llm: { async chat({ tools, messages }) {
+      assert(tools.some(tool => tool.function.name === "render_cruse"));
+      calls++;
+      if (calls === 1) return { content: "", toolCalls: [{
+        id: "render-intake", type: "function", function: {
+          name: "render_cruse", arguments: JSON.stringify({ presentation }),
+        },
+      }] };
+      assert.equal(JSON.parse(messages.find(message => message.role === "tool").content).status, "accepted");
+      return { content: "Fill in your order details below.", toolCalls: [] };
+    } },
+  };
+  let result;
+  for await (const event of engine.streamTurn("Help me check out")) {
+    if (event.type === "turn.completed") result = event.result;
+  }
+  assert.equal(result.text, "Fill in your order details below.");
+  assert.deepEqual(result.presentation, presentation);
+  assert.equal(calls, 2);
+});
+
+test("structured CRUSE objects and compatible child intake forms are preserved", () => {
+  const form = (id, properties) => ({ kind: "form", id, title: "Order details",
+    schema: { type: "object", properties, required: Object.keys(properties) } });
+  const first = { version: 1, components: [form("name", { customerName: { type: "string" } })] };
+  const second = { version: 1, components: [form("delivery", {
+    fulfillment: { type: "string", enum: ["pickup", "delivery"] },
+    address: { type: "string" },
+  })] };
+  for (const raw of [
+    first, JSON.stringify(first), { cruse: 1, text: "Please fill this in.", presentation: first },
+    { Name: "ordering", Mode: "Fulfill", Response: { text: "Details", presentation: first } },
+  ]) {
+    assert.deepEqual(parseAgentResponse(raw).presentation, first);
+  }
+  const combined = consolidateIntakePresentations([first, second]);
+  assert.equal(combined.components.length, 1);
+  assert.deepEqual(Object.keys(combined.components[0].schema.properties), ["customerName", "fulfillment", "address"]);
+  assert.deepEqual(combined.components[0].schema.required, ["customerName", "fulfillment", "address"]);
+  assert.deepEqual(Object.keys(first.components[0].schema.properties), ["customerName"], "Do not mutate child output");
+});
+
+test("coordinator retains child widgets when it answers in plain text", async () => {
+  const config = JSON.parse(await readFile(new URL("../pizza_restaurant_website_assistant.network.json", import.meta.url)));
+  const manifest = JSON.parse(await readFile(new URL("../agent-manifest.json", import.meta.url)));
+  let calls = 0;
+  const ctx = {
+    network: new AgentNetwork(config, scope.network), manifest, actions: registry,
+    baseOrigin: scope.base, displayOrigin: "localhost:8080", trace: new TraceBus(),
+    isTop: true, frontMan: "front_desk_coordinator", history: [],
+    llm: { async chat({ messages }) {
+      calls++;
+      if (calls === 1) return { content: "", toolCalls: [{ id: "ask-ordering", type: "function", function: {
+        name: "ordering_checkout_specialist", arguments: JSON.stringify({ inquiry: "Collect order details", mode: "Fulfill" }),
+      } }] };
+      if (calls === 2) return { content: "", toolCalls: [{ id: "child-ui", type: "function", function: {
+        name: "render_cruse", arguments: JSON.stringify({ presentation: { version: 1, components: [{
+          kind: "form", id: "child-intake", schema: { type: "object", properties: {
+            customerName: { type: "string" }, fulfillment: { type: "string", enum: ["pickup", "delivery"] },
+          }, required: ["customerName", "fulfillment"] },
+        }] } }),
+      } }] };
+      return { content: "Please provide your details below.", toolCalls: [] };
+    } },
+  };
+  const result = await runAgent(ctx, "front_desk_coordinator", "Help me order", null, []);
+  assert.equal(calls, 4);
+  assert.equal(result.presentation.components.length, 1);
+  assert.equal(result.presentation.components[0].id, "child-intake");
 });
