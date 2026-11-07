@@ -150,26 +150,10 @@ And the agent network will respond to your request.
 
 Now that you have all the building blocks, go ahead and make your agent network useful! Happy hacking!
 
-## Building
-
-### Auto generated agentic websites
-
-#### With Neuro SAN
-
-website  
-ground  
-validate  
-nsdeploy  
-
-libraries  
-skills  
-
-#### From scratch
-
-Manual edit -> hocon ref
-Generate hocon
-
 ### Agentifying an existing website
+
+> [!NOTE]
+> TODO
 
 ### Infrastructure
 
@@ -197,12 +181,19 @@ Try the [hosted version](https://neuro-san.evolution.ml/) with your own LLM keys
 
 ## Testing
 
+> [!NOTE]
+> TODO
 
 ## Documentation
 
 ### HOCON reference
 
+The agent network HOCON reference is available in 
+[this document](https://github.com/cognizant-ai-lab/neuro-san/blob/main/docs/agent_hocon_reference.md).
+
 ### Spec
+
+The minimum viable specification for a worldwide agentic web is described in [this specification pdf](https://github.com/cognizant-ai-lab/nsdeploy/blob/main/docs/Worldwide_Agentic_Web_MVP_Spec_v0.1.pdf).
 
 ## Hackathon
 
