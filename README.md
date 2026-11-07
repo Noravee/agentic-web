@@ -58,35 +58,43 @@ The LLM provider, model and key used to answer these questions are chosen by the
 Quickly prototype an agent network using the
 [Neuro SAN BYOK](https://neuro-san.evolution.ml/multiAgentAccelerator?) service.
 
-1. In the settings (top right corner), select your LLM provider and enter your API key.
-Test and Save.  
-![Neuro SAN Settings API keys](docs/images/neuro_san_settings_api_keys.png)
-2. Back to the main page, click the blue "+" button to create a new agent network.  
-![Neuro SAN Create Agent Network](docs/images/neuro_san_create_agent_network.png)
-3. In the bottom right corner, type in your prompt and click the blue "Send" arrow button. For instance:  
-```prompt
-Create an assistant for a pizza restaurant website, with sub agents for menu, order and delivery
-```  
-![Neuro SAN ANDE prompt](docs/images/neuro_san_ande_prompt.png)  
-The agent network designer will create an agent network and come back with
-a proposed design and a few sample queries.
-4. Click on the generated agent network that appears in the left panel menu as
-a "Temporary" agent network to interact with it.
-It will be available for 3 days before it is automatically deleted.  
-![Neuro SAN Temporary Agent Network](docs/images/neuro_san_temporary_agent_network.png)
-6. The agents are not grounded yet, but you can test the agent network by typing in queries and clicking the blue "Send" arrow button.  
-![Neuro SAN Chat](docs/images/neuro_san_chat.png)
-7. Update the design as needed: click the `Edit this network` `🖊️` icon next to the
-agent network name under "Temporary" in the left panel menu.
-Then use the "NETWORK EDITOR" prompt at the bottom of the screen,
-below the agent network graph to tell the agent network designer what to change.
-Once satisfied, click the "Download network
-definition" icon `⤓` next to the agent network, 
-This will download the `.hocon` file describing the agent network.
-See [examples/pizza_restaurant_website_assistant.hocon](examples/pizza_restaurant_website_assistant.hocon) for an example.
-8. Click the "Download website bundle" icon `⤓` next to the agent network to download a zip file containing the website bundle.  
-> [!NOTE]
-> TODO: Use manual mode for now
+1. In the settings (top right corner), select your LLM provider and enter your API key. 
+   Test and Save.
+   ![Neuro SAN Settings API keys](docs/images/neuro_san_settings_api_keys.png)
+  
+1. Back to the main page, click the blue "+" button to create a new agent network.  
+   ![Neuro SAN Create Agent Network](docs/images/neuro_san_create_agent_network.png)
+  
+1. In the bottom right corner, type in your prompt and click the blue "Send" arrow button. For instance:
+   ```prompt
+   Create an assistant for a pizza restaurant website, with sub agents for menu, order and delivery
+   ```
+   ![Neuro SAN ANDE prompt](docs/images/neuro_san_ande_prompt.png)  
+   The agent network designer will create an agent network and come back with
+   a proposed design and a few sample queries.
+  
+1. Click on the generated agent network that appears in the left panel menu as
+   a "Temporary" agent network to interact with it.
+   It will be available for 3 days before it is automatically deleted.  
+   ![Neuro SAN Temporary Agent Network](docs/images/neuro_san_temporary_agent_network.png)
+  
+1. The agents are not grounded yet, but you can test the agent network by typing in queries
+   and clicking the blue "Send" arrow button.  
+   ![Neuro SAN Chat](docs/images/neuro_san_chat.png)
+  
+1. Update the design as needed: click the `Edit this network` `🖊️` icon next to the
+   agent network name under "Temporary" in the left panel menu.
+   Then use the "NETWORK EDITOR" prompt at the bottom of the screen,
+   below the agent network graph to tell the agent network designer what to change.
+   Once satisfied, click the "Download network
+   definition" icon `⤓` next to the agent network, 
+   This will download the `.hocon` file describing the agent network.
+   See [examples/pizza_restaurant_website_assistant.hocon](examples/pizza_restaurant_website_assistant.hocon) for an example.
+  
+1. Click the "Download website bundle" icon `⤓` next to the agent network to download a zip
+   file containing the website bundle.  
+   > [!NOTE]
+   > TODO: Use manual mode for now
 
 ### Manually generate a website bundle
 
@@ -97,20 +105,21 @@ You can use [nsdeploy](https://github.com/cognizant-ai-lab/nsdeploy) to generate
 a website bundle from a `.hocon` file describing an agent network.
 
 1. Install [nsdeploy](https://github.com/cognizant-ai-lab/nsdeploy#install--run)  
-```shell
-pip install nsdeploy
-```
-2. Create a self-contained static bundle  
-```shell
-python -m nsdeploy examples/pizza_restaurant_website_assistant.hocon \
-  --static-bundle --out ./dist/pizza
-```
-3. Check the output of the command, especially for warnings about DEMO-MODE agents (ungrounded agents) and omitted server tools.
-4. Preview the generated bundle with an ordinary static web server, for instance:
-```shell
-python -m http.server 8080 --directory ./dist/pizza
-```
-Then open http://127.0.0.1:8080/.
+   ```shell
+   pip install nsdeploy
+   ```
+1. Create a self-contained static bundle  
+   ```shell
+   python -m nsdeploy examples/pizza_restaurant_website_assistant.hocon \
+     --static-bundle --out ./dist/pizza
+   ```
+1. Check the output of the command, especially for warnings about DEMO-MODE agents (ungrounded agents)
+   and omitted server tools.
+1. Preview the generated bundle with an ordinary static web server, for instance:
+   ```shell
+   python -m http.server 8080 --directory ./dist/pizza
+   ```
+   Then open http://127.0.0.1:8080/.
 
 ### Test with your own LLM provider API key
 
