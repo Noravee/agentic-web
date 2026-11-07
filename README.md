@@ -159,7 +159,9 @@ And the agent network will respond to your request.
 
 Now that you have all the building blocks, go ahead and make your agent network useful! Happy hacking!
 
-### Agentifying an existing website
+## Agentifying an existing website
+
+### Existing website
 
 Start with the [simple pizza restaurant website](examples/pizza_restaurant/).
 It is a standalone HTML, CSS and JavaScript example with a menu (including
@@ -180,7 +182,13 @@ Use this as the existing website to agentify: ground menu answers in its menu
 data and connect an agent's ordering tools to its cart and checkout logic.
 See the [example's README](examples/pizza_restaurant/README.md) for the file layout.
 
-### Infrastructure
+### Agentified version
+
+> [!NOTE]
+> TODO: add agentified version of pizza restaurant website
+
+
+## Infrastructure
 
 Build tools and infrastructure for the agentic web: what will simplify the creation, deployment, and discovery of agentic websites? What will make them more useful?
 
