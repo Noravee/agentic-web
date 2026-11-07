@@ -159,12 +159,36 @@ And the agent network will respond to your request.
 
 Now that you have all the building blocks, go ahead and make your agent network useful! Happy hacking!
 
-### Agentifying an existing website
+## Agentifying an existing website
+
+### Existing website
+
+Start with the [simple pizza restaurant website](examples/pizza_restaurant/).
+It is a standalone HTML, CSS and JavaScript example with a menu (including
+ingredients and dietary information), a cart, and a demo pickup or delivery
+checkout. It has no dependencies, backend or agent integration yet.
+
+Run it from the repository root:
+
+```shell
+python -m http.server 8080 --directory ./examples/pizza_restaurant
+```
+
+Then open http://127.0.0.1:8080/. Add pizzas to the cart, adjust quantities,
+choose pickup or delivery, and place a demo order to see its confirmation.
+Orders stay in memory and no payment is collected or food ordered.
+
+Use this as the existing website to agentify: ground menu answers in its menu
+data and connect an agent's ordering tools to its cart and checkout logic.
+See the [example's README](examples/pizza_restaurant/README.md) for the file layout.
+
+### Agentified version
 
 > [!NOTE]
-> TODO
+> TODO: add agentified version of pizza restaurant website
 
-### Infrastructure
+
+## Infrastructure
 
 Build tools and infrastructure for the agentic web: what will simplify the creation, deployment, and discovery of agentic websites? What will make them more useful?
 
