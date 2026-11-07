@@ -1,0 +1,75 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  color: #29291f;
+  background: #faf7ef;
+  line-height: 1.5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1100px; margin: auto; padding: 24px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #ded9ca; }
+a { color: inherit; text-underline-offset: 4px; }
+.brand { font-size: 1.4rem; font-weight: 800; text-decoration: none; }
+.brand span { color: #a63220; }
+nav { display: flex; gap: 24px; }
+.intro { padding: 40px 0; }
+.eyebrow { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #a63220; }
+h1 { font-family: Georgia, serif; font-size: clamp(2.5rem, 6vw, 4rem); line-height: 1.1; margin: 16px 0; }
+h2 { font-family: Georgia, serif; font-size: 1.8rem; margin: 0 0 12px; }
+h3 { margin: 0; font-size: 1.1rem; }
+p { margin: 12px 0; }
+.demo-note, small { color: #625c50; font-size: .875rem; }
+.ordering-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.menu-items { margin-top: 24px; }
+.menu-item { border-top: 1px solid #ded9ca; padding: 22px 0; }
+.item-heading, .item-actions, .cart-line, .total { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.item-heading { align-items: baseline; }
+.dietary { color: #3d6333; font-size: .875rem; font-weight: 600; }
+button, input, select, textarea { font: inherit; }
+button { border: 1px solid #a63220; border-radius: 6px; padding: 10px 16px; background: #a63220; color: white; cursor: pointer; }
+button:hover { background: #822718; }
+button:disabled { background: #e8e3d8; color: #625c50; border-color: #d8d2c6; cursor: default; }
+:focus-visible { outline: 3px solid #216c99; outline-offset: 3px; }
+.cart { padding: 24px; border: 1px solid #ded9ca; border-radius: 12px; background: white; }
+.cart-items { list-style: none; margin: 0; padding: 0; }
+.cart-items li { padding: 16px 0; border-bottom: 1px solid #ded9ca; }
+.quantity-controls { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.quantity-controls button { padding: 6px 12px; min-width: 36px; }
+.quantity-controls .remove { margin-left: auto; background: transparent; border: 0; color: #a63220; text-decoration: underline; }
+.total { font-size: 1.15rem; padding: 12px 0; }
+label { display: block; font-weight: 600; margin: 16px 0 6px; }
+input, select, textarea { width: 100%; padding: 10px; border: 1px solid #aaa393; border-radius: 5px; background: white; color: inherit; }
+textarea { resize: vertical; }
+small { display: block; margin-top: 6px; }
+#place-order { width: 100%; margin-top: 24px; }
+.confirmation { margin-top: 32px; padding: 24px; border: 1px solid #7e946e; border-radius: 12px; background: #eff4e9; overflow-wrap: anywhere; }
+footer { margin-top: 32px; font-size: .875rem; color: #625c50; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+[hidden] { display: none !important; }
+.assistant { margin-top: 48px; }
+#checkout-error { color: #a63220; }
+#agent-app {
+  --ns-font: system-ui, sans-serif;
+  --ns-bg: #faf7ef;
+  --ns-fg: #29291f;
+  --ns-primary: #a63220;
+  --ns-accent: #a63220;
+  --ns-border: #ded9ca;
+  --ns-panelbg: white;
+  --ns-msgbg: #efeadd;
+  --ns-muted: #625c50;
+}
+.assistant-panels { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 16px; margin-top: 16px; }
+#agent-app [data-ns-slot="chat"] { height: 720px; }
+#agent-app input[type="checkbox"] { width: auto; }
+#agent-app .ns-header { flex-wrap: wrap; }
+#agent-app .ns-settings-body label { margin: 4px 0; }
+@media (max-width: 720px) {
+  header, main, footer { padding: 20px; }
+  header { align-items: start; }
+  nav { gap: 12px; flex-wrap: wrap; }
+  .ordering-layout { grid-template-columns: 1fr; gap: 24px; }
+  .intro { padding: 24px 0; }
+  .assistant-panels { grid-template-columns: 1fr; }
+}

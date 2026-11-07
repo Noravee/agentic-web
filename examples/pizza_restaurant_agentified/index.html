@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A simple pizza restaurant demo with a menu, cart and checkout.">
+    <title>Little Oven Pizza</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="script.js"></script>
+    <script type="module" src="site.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="#">Little Oven <span>Pizza</span></a>
+      <nav aria-label="Main navigation"><a href="#menu">Menu</a><a href="#cart">Your order</a><a href="#assistant">Assistant</a></nav>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="welcome">
+        <p class="eyebrow">Good pizza. Simple ingredients.</p>
+        <h1 id="welcome">A little oven.<br>A lot of flavor.</h1>
+        <p>Pick your favorites. We'll take care of dinner.</p>
+        <p class="demo-note">Developer demo — orders are simulated, with no payment or real fulfillment.</p>
+      </section>
+      <div class="ordering-layout">
+        <section id="menu" aria-labelledby="menu-heading">
+          <h2 id="menu-heading">Our menu</h2>
+          <p>All pizzas are 12 inches. Prices in USD, with no additional demo taxes or fees.</p>
+          <p>All pizzas contain wheat. Vegetarian and vegan options are labeled; all are prepared in a shared kitchen.</p>
+          <div id="menu-items" class="menu-items"></div>
+          <noscript>Please enable JavaScript to view the menu and place a demo order.</noscript>
+        </section>
+        <section id="cart" class="cart" aria-labelledby="cart-heading">
+          <h2 id="cart-heading">Your order</h2>
+          <p id="empty-cart">Your cart is empty. Add a pizza to get started.</p>
+          <ul id="cart-items" class="cart-items"></ul>
+          <p class="total">Total <strong id="cart-total">$0.00</strong></p>
+          <form id="checkout-form">
+            <label for="customer-name">Your name</label>
+            <input id="customer-name" name="customerName" autocomplete="name" required maxlength="80">
+            <label for="fulfillment">Pickup or delivery</label>
+            <select id="fulfillment" name="fulfillment">
+              <option value="pickup">Pickup</option>
+              <option value="delivery">Delivery (free in this demo)</option>
+            </select>
+            <div id="delivery-fields" hidden>
+              <label for="address">Delivery address</label>
+              <textarea id="address" name="address" autocomplete="street-address" rows="3" maxlength="300" disabled></textarea>
+            </div>
+            <label for="order-time">When would you like it?</label>
+            <input id="order-time" name="orderTime" type="time">
+            <small>Leave blank for as soon as possible. Times are for today.</small>
+            <button id="place-order" type="submit" disabled>Place demo order</button>
+            <p id="checkout-error" role="alert"></p>
+          </form>
+        </section>
+      </div>
+      <p id="cart-status" class="visually-hidden" role="status"></p>
+      <section id="confirmation" class="confirmation" aria-labelledby="confirmation-heading" tabindex="-1" hidden>
+        <p class="eyebrow">Thanks for stopping by</p>
+        <h2 id="confirmation-heading">Demo order received!</h2>
+        <p id="order-summary"></p>
+        <ul id="order-items"></ul>
+        <p id="order-total"></p>
+        <p>This confirmation is simulated. Refreshing the page clears it.</p>
+      </section>
+      <section id="assistant" class="assistant" aria-labelledby="assistant-heading">
+        <h2 id="assistant-heading">Ask Little Oven</h2>
+        <p>Ask about the menu or get help with your order. Configure your own LLM provider below.</p>
+        <p class="demo-note">Chat and restaurant context are sent to your selected LLM provider. Review proposed actions before confirming them. Orders are simulated.</p>
+        <p id="assistant-status" role="status">Connecting the assistant…</p>
+        <div id="agent-app">
+          <div data-ns-slot="header"></div>
+          <div class="assistant-panels">
+            <div data-ns-slot="chat"></div>
+            <div data-ns-slot="agents"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>Little Oven Pizza · A simple example for the Open Agentic Web</footer>
+  </body>
+</html>
