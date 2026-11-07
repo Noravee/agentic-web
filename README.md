@@ -184,8 +184,65 @@ See the [example's README](examples/pizza_restaurant/README.md) for the file lay
 
 ### Agentified version
 
-> [!NOTE]
-> TODO: add agentified version of pizza restaurant website
+The [agentified pizza restaurant](examples/pizza_restaurant_agentified/) is a copy
+of the existing website with the generated browser assistant embedded below its
+menu and cart. The original website remains available on its own.
+
+To create this version:
+
+1. Copy the existing website:
+   ```shell
+   cp -R examples/pizza_restaurant examples/pizza_restaurant_agentified
+   ```
+2. Select components from
+   [the generated static bundle](examples/sites/pizza_restaurant_website_assistant_static/):
+   copy its `runtime/` directory, `agent-manifest.json`,
+   `pizza_restaurant_website_assistant.network.json`, `links.json`, and
+   `agent-mcp.json` into the new directory. Keep the restaurant's HTML and styles;
+   the generated bundle's full-page `index.html` and `theme.css` are not needed.
+3. Add a mount point below the restaurant checkout in `index.html` and load
+   `site.js` as a module. In [site.js](examples/pizza_restaurant_agentified/site.js),
+   call the copied runtime's `boot()` with that mount point and URLs relative to
+   the current site. The runtime provides chat, BYOK settings, agent activity,
+   structured action proposals, and a confirmation dialog.
+4. Ground the network in the restaurant. Update the copied network's instructions
+   to use actual menu and order data, remove instructions to invent demo results,
+   and resolve the ordering and delivery specialists as local agents. `site.js`
+   appends the current menu, cart, prices and latest local order to each agent
+   invocation. All agents read the same state used by the restaurant UI.
+5. Connect website operations. Export shared state and checkout functions from
+   `script.js`; register `get_restaurant_state`, `set_cart`, and
+   `checkout_demo_order` in
+   [restaurant-actions.js](examples/pizza_restaurant_agentified/restaurant-actions.js).
+   Declare this module in the manifest's `actions` field. The runtime validates
+   proposed arguments and asks the customer to review them before execution.
+   Cart changes appear in the existing cart; checkout uses the same validation
+   and confirmation as the manual form. A cart version check rejects checkout
+   if the cart has changed since the proposal was prepared.
+6. Serve the copy over HTTP (ES modules and runtime configuration need a server):
+   ```shell
+   python -m http.server 8080 --directory ./examples/pizza_restaurant_agentified
+   ```
+   Open http://127.0.0.1:8080/, scroll to **Ask Little Oven**, and expand
+   **BYOK / router settings**. Enter your API key, model ID and a browser-accessible
+   OpenAI-compatible router base URL, then click **Apply, save & reload**.
+   The selected provider receives the chat and restaurant context; LLM calls use
+   the customer's credentials.
+
+Try asking “What are the vegetarian options?” or “Add two Margherita pizzas to
+my cart.” Review and confirm the proposed cart action, then ask for pickup or
+delivery checkout. Provide a name and, for delivery, an address; review the cart
+and total before confirming the separate checkout action. Its receipt and the
+restaurant confirmation show the resulting demo order.
+
+This version supports menu questions, shared-cart updates, demo checkout and
+the latest local order's `received` status. Orders still live only in page memory;
+no food is ordered or payment collected. Delivery is a simulated choice, with
+no external delivery delegation or live tracking. The copied `agent-mcp.json`
+explicitly marks the public MCP facade unavailable: static hosting alone does
+not provide a server for other websites to submit orders. See the
+[agentified example's README](examples/pizza_restaurant_agentified/README.md)
+for component details and verification instructions.
 
 
 ## Infrastructure
