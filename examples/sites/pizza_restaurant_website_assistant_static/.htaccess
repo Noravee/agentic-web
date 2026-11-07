@@ -1,0 +1,8 @@
+<IfModule mod_headers.c>
+  <FilesMatch "^(agent\-manifest\.json|pizza_restaurant_website_assistant\.network\.json|links\.json|agent\-mcp\.json|nsdeploy\.json|nsdeploy\-agent\.json)$">
+    Header always set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+  <Files "sandbox-worker.js">
+    Header always set Content-Security-Policy "default-src 'none'; script-src blob:; connect-src 'none'; worker-src 'none'"
+  </Files>
+</IfModule>

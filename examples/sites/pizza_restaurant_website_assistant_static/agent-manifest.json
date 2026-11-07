@@ -1,0 +1,85 @@
+{
+  "brand": "Pizza Restaurant Website Assistant",
+  "networks": [
+    {
+      "name": "pizza_restaurant_website_assistant",
+      "front_man": "front_desk_coordinator",
+      "hocon": "./pizza_restaurant_website_assistant.network.json",
+      "description": "Triages customer requests for a pizza restaurant website, gathers minimal clarifying details, and delegates to the appropriate specialist for menu browsing, ordering/checkout, or delivery tracking, then summarizes results and guides next steps.",
+      "tags": [
+        "deployed",
+        "nsdeploy"
+      ],
+      "sample_queries": [
+        "What gluten-free pizza options do you have, and which ones can be made vegan?",
+        "I want a large pepperoni pizza for delivery to 123 Main St\u2014add cheesy bread and apply code FAMILY20, then show me the order total before I pay.",
+        "My order #48219 says \u201cout for delivery\u201d for 45 minutes\u2014what\u2019s the latest ETA and what should I check if it was marked delivered but I don\u2019t have it?",
+        "What deals are running today, and can you recommend a combo for two people under $25 that includes a drink?"
+      ]
+    }
+  ],
+  "llm_router": {
+    "base_url": "https://api.openai.com/v1",
+    "mock": false,
+    "byok_router": "https://api.openai.com/v1"
+  },
+  "allowed_peers": [],
+  "peer_policy": {
+    "mode": "open",
+    "deny_origins": [],
+    "note": "Public agent sites are reachable like web pages; credentials and capabilities do not transfer."
+  },
+  "agent_mcp": {
+    "protocol": "nsdeploy-agent-mcp/v1",
+    "network": "pizza_restaurant_website_assistant",
+    "front_man": "front_desk_coordinator",
+    "available": false,
+    "reason": "This is a static bundle; a public MCP facade requires an application host."
+  },
+  "theme": {
+    "primary": "#0ea5e9"
+  },
+  "linking": {
+    "protocol": "nsdeploy-link/v1",
+    "exports": [
+      {
+        "network": "pizza_restaurant_website_assistant",
+        "front_man": "front_desk_coordinator",
+        "aliases": [
+          "pizza_restaurant_website_assistant",
+          "front_desk_coordinator"
+        ],
+        "url": "pizza_restaurant_website_assistant"
+      }
+    ],
+    "imports": [
+      {
+        "network": "pizza_restaurant_website_assistant",
+        "reference": "delivery_tracking_specialist",
+        "callers": [
+          "front_desk_coordinator"
+        ],
+        "status": "pending"
+      },
+      {
+        "network": "pizza_restaurant_website_assistant",
+        "reference": "ordering_checkout_specialist",
+        "callers": [
+          "front_desk_coordinator"
+        ],
+        "status": "pending"
+      }
+    ],
+    "link_updates": {
+      "mode": "browser-local"
+    }
+  },
+  "deployment": {
+    "mode": "static",
+    "self_contained_runtime": true,
+    "browser_mock": false,
+    "direct_byok": true,
+    "direct_mcp_requires_cors": true,
+    "public_mcp_facade": false
+  }
+}

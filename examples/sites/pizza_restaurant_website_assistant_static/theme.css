@@ -1,0 +1,5 @@
+:root{--ns-font:"Segoe UI", system-ui, sans-serif;--ns-bg:#eef7ff;--ns-fg:#0f2a43;--ns-muted:#5b7a97;--ns-border:#cfe6fb;--ns-primary:#0ea5e9;--ns-accent:#14b8a6;--ns-msgbg:#e0f2fe;--ns-panelbg:#f7fcff;--ns-user-bg:linear-gradient(135deg,#0ea5e9,#14b8a6);--ns-radius:16px;}
+
+html,body{margin:0;height:100%;overflow:hidden}
+body{font-family:var(--ns-font);background:radial-gradient(1200px 500px at 20% -10%,#d8f1ff 0%,#eef7ff 60%)}
+#app{height:100vh;overflow:hidden}

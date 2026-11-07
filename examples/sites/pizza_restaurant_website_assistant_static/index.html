@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pizza Restaurant Website Assistant</title>
+  <link rel="stylesheet" href="./theme.css" />
+</head>
+<body>
+<div id="app" data-ns-layout="fixed">Loading Pizza Restaurant Website Assistant...</div>
+
+  <script type="module">
+    import { boot } from "./runtime/index.js";
+    const siteBase = new URL("./", window.location.href).href;
+    boot("#app", {
+      originUrl: siteBase,
+      sandboxWorkerUrl: new URL("runtime/sandbox-worker.js", siteBase).href,
+    }).then(async (runtime) => {
+      try {
+        const site = await import("./site.js");
+        await site.customize?.({ root: document.querySelector("#app"), runtime });
+      } catch (e) {
+        console.error("Site customization error", e);
+      }
+    }).catch((e) => {
+      const a = document.querySelector("#app"); if (a) a.textContent = "Boot error: " + e.message;
+      console.error(e);
+    });
+  </script>
+</body>
+</html>

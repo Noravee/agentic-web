@@ -1,0 +1,35 @@
+{
+  "protocol": "nsdeploy-link/v1",
+  "exports": [
+    {
+      "network": "pizza_restaurant_website_assistant",
+      "front_man": "front_desk_coordinator",
+      "aliases": [
+        "pizza_restaurant_website_assistant",
+        "front_desk_coordinator"
+      ],
+      "url": "pizza_restaurant_website_assistant"
+    }
+  ],
+  "imports": [
+    {
+      "network": "pizza_restaurant_website_assistant",
+      "reference": "delivery_tracking_specialist",
+      "callers": [
+        "front_desk_coordinator"
+      ],
+      "status": "pending"
+    },
+    {
+      "network": "pizza_restaurant_website_assistant",
+      "reference": "ordering_checkout_specialist",
+      "callers": [
+        "front_desk_coordinator"
+      ],
+      "status": "pending"
+    }
+  ],
+  "link_updates": {
+    "mode": "browser-local"
+  }
+}

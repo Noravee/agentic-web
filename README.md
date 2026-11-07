@@ -111,13 +111,13 @@ a website bundle from a `.hocon` file describing an agent network.
 1. Create a self-contained static bundle  
    ```shell
    python -m nsdeploy examples/pizza_restaurant_website_assistant.hocon \
-     --static-bundle --out ./dist/pizza
+     --static-bundle --out ./examples/sites/pizza_restaurant_website_assistant_static
    ```
 1. Check the output of the command, especially for warnings about DEMO-MODE agents (ungrounded agents)
    and omitted server tools.
 1. Preview the generated bundle with an ordinary static web server, for instance:
    ```shell
-   python -m http.server 8080 --directory ./dist/pizza
+   python -m http.server 8080 --directory ./examples/sites/pizza_restaurant_website_assistant_static
    ```
    Then open http://127.0.0.1:8080/.
 
