@@ -211,11 +211,15 @@ To create this version:
    appends the current menu, cart, prices and latest local order to each agent
    invocation. All agents read the same state used by the restaurant UI.
 5. Connect website operations. Export shared state and checkout functions from
-   `script.js`; register `get_restaurant_state`, `set_cart`, and
+   `script.js`; register `get_restaurant_state`, `add_to_cart`, `set_cart`, and
    `checkout_demo_order` in
    [restaurant-actions.js](examples/pizza_restaurant_agentified/restaurant-actions.js).
-   Declare this module in the manifest's `actions` field. The runtime validates
-   proposed arguments and asks the customer to review them before execution.
+   Declare this module in the manifest's `actions` field and list the read/cart
+   operations in `actions.agentTools`. The copied runtime's `runner.js` includes
+   a bridge that exposes those operations as model-callable `website_*` tools.
+   The agent calls `website_add_to_cart` to run the site's code immediately and
+   receives a receipt with the updated cart. Checkout remains a separate action
+   proposal requiring customer review. All arguments are schema-validated.
    Cart changes appear in the existing cart; checkout uses the same validation
    and confirmation as the manual form. A cart version check rejects checkout
    if the cart has changed since the proposal was prepared.
@@ -230,8 +234,8 @@ To create this version:
    the customer's credentials.
 
 Try asking “What are the vegetarian options?” or “Add two Margherita pizzas to
-my cart.” Review and confirm the proposed cart action, then ask for pickup or
-delivery checkout. Provide a name and, for delivery, an address; review the cart
+my cart.” The agent calls the cart tool and the visible cart updates. Then ask
+for pickup or delivery checkout. Provide a name and, for delivery, an address; review the cart
 and total before confirming the separate checkout action. Its receipt and the
 restaurant confirmation show the resulting demo order.
 

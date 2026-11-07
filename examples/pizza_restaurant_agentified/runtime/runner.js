@@ -192,6 +192,17 @@ export async function buildToolTable(ctx, spec, chain, parentSpan) {
       toolSchemas.push(schemaFor(name, c.spec.function));
     }
   }
+  // Publisher opt-in: expose selected local, reversible website actions as real
+  // model tools. Checkout remains a reviewed CRUSE action, never an auto tool.
+  const callable = new Set(ctx.manifest?.actions?.agentTools || []);
+  for (const action of ctx.actions?.catalog({ base: ctx.baseOrigin, network: network.name }) || []) {
+    if (!callable.has(action.name) || action.availability !== "local-only"
+      || !["read", "write"].includes(action.effect)) continue;
+    const name = `website_${action.name}`;
+    if (toolByName.has(name)) throw new Error(`Duplicate website tool: ${name}`);
+    toolByName.set(name, { kind: "website", ref: action.ref, parallelSafe: false });
+    toolSchemas.push(schemaFor(name, { description: action.description, parameters: action.inputSchema }));
+  }
   return { toolByName, toolSchemas };
 }
 
@@ -294,6 +305,20 @@ export async function executeToolCalls(ctx, calls, parentSpan, chain, { maxConcu
 
 export async function dispatchToolCall(ctx, entry, args, parentSpan, chain) {
   const { trace } = ctx;
+
+  if (entry.kind === "website") {
+    const registered = ctx.actions.entries.get(entry.ref);
+    if (!registered || !ctx.manifest?.actions?.agentTools?.includes(registered.name)
+      || registered.base !== ctx.baseOrigin || registered.network !== ctx.network.name
+      || registered.availability !== "local-only" || !["read", "write"].includes(registered.effect)) {
+      throw new Error("Website action is not callable by this agent.");
+    }
+    const plan = ctx.actions.prepare({ kind: "action", action: entry.ref, arguments: args });
+    // The publisher enables these reversible cart operations; order placement
+    // continues through the existing review dialog and submitActions path.
+    const receipts = await ctx.actions.execute(plan, async () => true, crypto.randomUUID());
+    return receipts[0];
+  }
 
   if (entry.kind === "agent") {
     return runAgent(ctx, entry.ref, argsToText(args), parentSpan, chain);
@@ -415,7 +440,10 @@ export async function runAgent(ctx, agentName, userText, parentSpan, chain) {
   // ctx: siblings and remote networks can be running concurrently.
   const catalog = ctx.actions?.catalog({ base: ctx.baseOrigin, network: ctx.network.name }) || [];
   const presentationContext = agentPresentationContext(ctx, agentName);
-  const context = presentationContext + (presentationContext && ctx.actions ? actionContext(catalog) : "");
+  const nativeTools = new Set(ctx.manifest?.actions?.agentTools || []);
+  const proposalCatalog = catalog.filter(action => !nativeTools.has(action.name)
+    || action.availability !== "local-only" || !["read", "write"].includes(action.effect));
+  const context = presentationContext + (presentationContext && ctx.actions ? actionContext(proposalCatalog) : "");
   const network = Object.create(ctx.network);
   network.getAgentSpec = (name) => {
     const spec = ctx.network.getAgentSpec(name);

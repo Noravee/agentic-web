@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { ActionRegistry } from "../runtime/actions.js";
 import { AgentNetwork, validateNetwork } from "../runtime/kernel.js";
+import { buildToolTable, dispatchToolCall, runAgent } from "../runtime/runner.js";
+import { TraceBus } from "../runtime/trace.js";
 
 // Minimal DOM fixture for application integration checks, not a browser emulator.
 class Element {
@@ -81,7 +83,7 @@ test("copied network resolves all specialists locally", async () => {
 
 test("real registry and page share cart, validation, review and checkout", async () => {
   assert.equal(nodes["menu-items"].children.length, 4);
-  assert.equal(catalog.length, 3);
+  assert.equal(catalog.length, 4);
   assert(catalog.every(action => action.availability === "local-only"));
   assert.equal(nodes["place-order"].disabled, true);
 
@@ -145,4 +147,54 @@ test("real registry and page share cart, validation, review and checkout", async
   assert.equal(nodes["order-summary"].children.length, 0, "Customer data must remain text");
   const [stateReceipt] = await execute("get_restaurant_state", {});
   assert.equal(stateReceipt.result.lastOrder.orderId, getRestaurantState().lastOrder.orderId);
+});
+
+test("model tool calls execute the cart code and return receipts before the answer", async () => {
+  setCart([{ id: "vegan", quantity: 1 }]);
+  const config = JSON.parse(await readFile(new URL("../pizza_restaurant_website_assistant.network.json", import.meta.url)));
+  const manifest = JSON.parse(await readFile(new URL("../agent-manifest.json", import.meta.url)));
+  const network = new AgentNetwork(config, scope.network);
+  let modelCalls = 0;
+  const ctx = {
+    network, manifest, actions: registry, baseOrigin: scope.base,
+    displayOrigin: "localhost:8080", trace: new TraceBus(),
+    isTop: true, frontMan: "front_desk_coordinator", history: [],
+    llm: { async chat({ tools, messages }) {
+      modelCalls++;
+      assert(tools.some(tool => tool.function.name === "website_add_to_cart"));
+      assert(!tools.some(tool => tool.function.name === "website_checkout_demo_order"));
+      if (modelCalls === 1) return {
+        content: "", toolCalls: [{
+          id: "add-pizza", type: "function",
+          function: { name: "website_add_to_cart", arguments: JSON.stringify({ id: "margherita", quantity: 2 }) },
+        }],
+      };
+      const receipt = JSON.parse(messages.find(message => message.role === "tool").content);
+      assert.equal(receipt.status, "succeeded");
+      assert.equal(receipt.result.total, 3700);
+      assert.equal(nodes["cart-total"].textContent, "$37.00");
+      return { content: "Added two Margherita pizzas. Your cart total is $37.00.", toolCalls: [] };
+    } },
+  };
+  const result = await runAgent(ctx, "front_desk_coordinator", "Add two Margherita pizzas", null, []);
+  assert.equal(modelCalls, 2);
+  assert.match(result.text, /Added two/);
+  assert.deepEqual(getRestaurantState().cart, [
+    { id: "vegan", quantity: 1 }, { id: "margherita", quantity: 2 },
+  ]);
+
+  const { toolByName } = await buildToolTable(ctx, network.getAgentSpec("ordering_checkout_specialist"), [], null);
+  const add = toolByName.get("website_add_to_cart");
+  assert(add, "Specialists must have access to cart tools too");
+  const before = getRestaurantState();
+  await assert.rejects(dispatchToolCall(ctx, add, { id: "unknown", quantity: 1 }, null, []));
+  assert.deepEqual(getRestaurantState(), before);
+  // Even an accidental manifest opt-in cannot bypass checkout review.
+  manifest.actions.agentTools.push("checkout_demo_order");
+  const table = await buildToolTable(ctx, network.getAgentSpec("front_desk_coordinator"), [], null);
+  assert(!table.toolByName.has("website_checkout_demo_order"));
+  await assert.rejects(dispatchToolCall(ctx, {
+    kind: "website", ref: catalog.find(action => action.name === "checkout_demo_order").ref,
+  }, checkout(), null, []));
+  assert.deepEqual(getRestaurantState(), before);
 });

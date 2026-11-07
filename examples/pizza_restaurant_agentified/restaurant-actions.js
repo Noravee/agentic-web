@@ -1,8 +1,27 @@
 import { getRestaurantState, setCart, submitOrder, menu } from "./script.js";
 
 // The generated runtime loads this module via agent-manifest.json.
-// It validates arguments and asks the user to review them before execution.
+// Arguments are validated for both model-callable cart tools and reviewed checkout.
 export function registerActions(actions) {
+  actions.register({
+    name: "add_to_cart",
+    description: "Add a quantity of a menu item to the visible shared cart immediately, keeping all existing items. Returns the updated cart and total. Does not place an order.",
+    effect: "write",
+    inputSchema: {
+      type: "object", additionalProperties: false, required: ["id", "quantity"],
+      properties: {
+        id: { type: "string", enum: menu.map(item => item.id) },
+        quantity: { type: "integer", minimum: 1, maximum: 100 },
+      },
+    },
+    execute: ({ id, quantity }) => {
+      const items = getRestaurantState().cart;
+      const existing = items.find(item => item.id === id);
+      if (existing) existing.quantity += quantity;
+      else items.push({ id, quantity });
+      return setCart(items);
+    },
+  });
   actions.register({
     name: "get_restaurant_state",
     description: "Read the actual menu, shared cart, total, cartVersion and latest simulated order on this page.",

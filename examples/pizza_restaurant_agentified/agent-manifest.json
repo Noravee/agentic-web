@@ -67,6 +67,11 @@
   },
   "actions": {
     "version": 1,
-    "module": "./restaurant-actions.js"
+    "module": "./restaurant-actions.js",
+    "agentTools": [
+      "get_restaurant_state",
+      "add_to_cart",
+      "set_cart"
+    ]
   }
 }

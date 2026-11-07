@@ -27,8 +27,9 @@ The assistant requires a configured provider; the manual website does not.
 
 1. Ask “What are the vegetarian options?” or “Which pizza is made without dairy?”
    Answers use the actual menu, including the shared-kitchen note.
-2. Ask “Add two Margherita pizzas to my cart.” Confirm the proposed `set_cart`
-   action in the review dialog and check that the cart shows $24.00.
+2. Ask “Add two Margherita pizzas to my cart.” The agent calls
+   `website_add_to_cart`, which runs the site's cart code immediately. Check that
+   the visible cart shows $24.00. Existing items remain in the cart.
 3. Adjust a quantity with the manual buttons, then ask the assistant about your
    cart. Its next invocation includes the updated state.
 4. Ask to check out for pickup or delivery. Supply a name, an address for delivery,
@@ -38,8 +39,9 @@ The assistant requires a configured provider; the manual website does not.
 5. Ask about your latest order's status. It reports the local simulated order as
    `received`; it cannot look up orders from other sessions.
 
-The runtime distinguishes a proposed operation from an executed operation.
-Successful actions return local receipts. Declining a review changes nothing.
+Cart tool calls execute immediately and return local receipts to the model, so
+it can confirm the actual updated quantities and total. Checkout uses a separate
+reviewed proposal. Declining checkout review does not place an order.
 Checkout includes `expectedCartVersion`; changes to the cart invalidate an old
 checkout proposal, so the customer must review the updated cart before retrying.
 
@@ -47,15 +49,20 @@ checkout proposal, so the customer must review the updated cart before retrying.
 
 Copied unchanged from the generated bundle:
 
-- `runtime/`: complete browser module dependency tree, including chat, BYOK,
-  orchestration, CRUSE structured presentations, argument validation and action review.
 - `links.json`: empty published peer links.
 - `agent-mcp.json`: explicitly declares that a public MCP facade is unavailable.
 
 Adapted from that bundle:
 
+- `runtime/`: the complete browser dependency tree. `runner.js` adds a small
+  bridge from model tool calls to the site's action registry. Only operations
+  listed in `actions.agentTools` with a local `read` or `write` effect are exposed.
+  They use the same schema validation and receipt handling as reviewed actions.
+  Cart calls execute sequentially. Irreversible checkout is never auto-exposed.
+  The other runtime files remain unchanged.
 - `agent-manifest.json`: restaurant branding, supported sample queries, local
-  specialist links and the `actions.module` registration entry.
+  specialist links, the `actions.module` registration entry, and an explicit
+  `actions.agentTools` list for state reads and cart changes.
 - `pizza_restaurant_website_assistant.network.json`: the coordinator and menu,
   ordering and delivery specialists, with grounded instructions replacing the
   generated instructions to fabricate results. The generated CRUSE presentation
@@ -63,7 +70,7 @@ Adapted from that bundle:
 - `site.js`: adapts the generated `boot()` pattern to mount the assistant inside
   the restaurant. It enriches each local agent specification with a fresh
   `getRestaurantState()` snapshot, including the menu, cart, version and latest
-  order. No changes to the copied runtime are needed.
+  order.
 
 Restaurant integration:
 
@@ -73,9 +80,11 @@ Restaurant integration:
 - `script.js`: keeps the menu and cart rendering and exports
   `getRestaurantState()`, `setCart(items)` and `submitOrder(details)`. Both manual
   and assistant checkout use `submitOrder`, including validation and rendering.
-- `restaurant-actions.js`: registers three page-local capabilities with explicit
-  schemas and effects. `set_cart` replaces the entire cart; checkout uses its
-  current version. The runtime requires review before executing action proposals.
+- `restaurant-actions.js`: registers four page-local capabilities with explicit
+  schemas and effects. `add_to_cart` increments one item's quantity and preserves
+  existing items; `set_cart` replaces the entire cart. These are callable model
+  tools, along with `get_restaurant_state`. Checkout uses the cart's current
+  version and still requires customer review.
 
 ## Verification
 
@@ -87,6 +96,8 @@ node --test examples/pizza_restaurant_agentified/tests/restaurant.test.mjs
 
 These exercise the real action registry, argument schemas, confirmation boundary,
 shared cart, checkout receipts, validation, stale proposals and network structure.
+A regression check runs the actual agent loop with a scripted model tool response,
+verifying that the cart DOM updates and the next model call receives its receipt.
 They do not call a paid LLM. Use the steps above to check a live provider and the UI.
 
 ## Limits
