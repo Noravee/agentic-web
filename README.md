@@ -296,7 +296,7 @@ The agent network HOCON reference is available in
 
 ### Spec
 
-The minimum viable specification for a worldwide agentic web is described in [this specification pdf](https://github.com/cognizant-ai-lab/nsdeploy/blob/main/docs/Worldwide_Agentic_Web_MVP_Spec.pdf).
+The minimum viable specification for a worldwide agentic web is described in [docs/worldwide_agentic_web_mvp_spec.md](docs/worldwide_agentic_web_mvp_spec.md).
 
 ## Hackathon
 
