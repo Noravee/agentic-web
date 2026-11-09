@@ -86,15 +86,11 @@ Quickly prototype an agent network using the
    agent network name under "Temporary" in the left panel menu.
    Then use the "NETWORK EDITOR" prompt at the bottom of the screen,
    below the agent network graph to tell the agent network designer what to change.
-   Once satisfied, click the "Download network
+   
+1. Once satisfied, click the "Download network
    definition" icon `⤓` next to the agent network, 
    This will download the `.hocon` file describing the agent network.
    See [examples/pizza_restaurant_website_assistant.hocon](examples/pizza_restaurant_website_assistant.hocon) for an example.
-  
-1. Click the "Download website bundle" icon `⤓` next to the agent network to download a zip
-   file containing the website bundle.  
-   > [!NOTE]
-   > TODO: Use manual mode for now
 
 ### Manually generate a website bundle
 
@@ -115,7 +111,8 @@ a website bundle from a `.hocon` file describing an agent network.
    ```
 1. Check the output of the command, especially for warnings about DEMO-MODE agents (ungrounded agents)
    and omitted server tools.
-1. Preview the generated bundle with an ordinary static web server, for instance:
+1. Preview the [generated bundle](examples/sites/pizza_restaurant_website_assistant_static)
+   with an ordinary static web server, for instance:
    ```shell
    python -m http.server 8080 --directory ./examples/sites/pizza_restaurant_website_assistant_static
    ```
@@ -186,9 +183,13 @@ See the [example's README](examples/pizza_restaurant/README.md) for the file lay
 
 The [agentified pizza restaurant](examples/pizza_restaurant_agentified/) is a copy
 of the existing website with the generated browser assistant embedded below its
-menu and cart. The original website remains available on its own.
+menu and cart. The original website remains available on its own.  
 
-To create this version:
+To create this version,
+[examples/pizza_restaurant_website_assistant.hocon](examples/pizza_restaurant_website_assistant.hocon)
+and the generated [pizza_restaurant_website_assistant.network.json](examples/sites/pizza_restaurant_website_assistant_static/pizza_restaurant_website_assistant.network.json)
+can be used as a starting point for the agent network.
+Its agents need to be grounded in the restaurant's actual menu and cart next:
 
 1. Copy the existing website:
    ```shell
